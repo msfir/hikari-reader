@@ -407,18 +407,38 @@ input, select { font-family: var(--font-ui); }
   background: var(--accent); border-radius: 50%;
 }
 
-/* ── FLOATING BOOKMARK BUTTON ──────────────────────────────── */
-#fab-bookmark {
-  position: fixed; bottom: 68px; right: 24px;
-  width: 40px; height: 40px; border-radius: 50%;
-  background: var(--accent); color: #fff;
-  font-size: 16px; box-shadow: 0 3px 12px rgba(0,0,0,0.2);
-  display: none; align-items: center; justify-content: center;
-  transition: transform 0.15s, box-shadow 0.15s;
-  z-index: 50;
+/* ── READER CONTROLS ────────────────────────────────────────── */
+/* Desktop: static in flow, always visible, no FAB */
+#reader-controls {
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  padding: 8px 16px;
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
-#fab-bookmark:hover { transform: scale(1.08); box-shadow: 0 5px 18px rgba(0,0,0,0.28); }
-.view.active #fab-bookmark { display: flex; }
+
+/* ── CONTROLS TOGGLE TAB (mobile/tablet only) ───────────────── */
+#controls-tab {
+  display: none; /* shown only on ≤900px via media query */
+  width: 100%;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  border-bottom: none;
+  padding: 6px 0 4px;
+  cursor: pointer;
+  transition: background var(--trans);
+  align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+#controls-tab:hover { background: var(--bg-hover); }
+#controls-tab svg {
+  display: block;
+  width: 22px; height: 14px;
+  color: var(--text-3);
+  transition: color var(--trans);
+}
+#controls-tab:hover svg { color: var(--accent); }
 
 /* ── TOAST ──────────────────────────────────────────────────── */
 #toast {
@@ -473,10 +493,136 @@ input, select { font-family: var(--font-ui); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── RESPONSIVE ─────────────────────────────────────────────── */
-@media (max-width: 700px) {
-  #view-library { padding: 20px 16px 40px; }
-  :root { --sidebar-w: 220px; }
+
+/* Backdrop — hidden on desktop, shown on tablet/mobile */
+#sidebar-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 199;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--trans);
+}
+#sidebar-backdrop.show { opacity: 1; pointer-events: all; }
+
+/* ── Tablet & Mobile (≤ 900px) — sidebar overlays + controls hidden ── */
+@media (max-width: 900px) {
+  :root { --sidebar-w: 280px; }
+
+  /* Sidebar overlays as a drawer */
+  #sidebar {
+    position: fixed; top: var(--topbar-h); left: 0; bottom: 0;
+    z-index: 200; height: auto;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+    width: var(--sidebar-w) !important;
+    transition: transform var(--trans), opacity var(--trans);
+    transform: translateX(0); opacity: 1;
+  }
+  #sidebar.collapsed {
+    transform: translateX(-100%); opacity: 0; pointer-events: none;
+  }
+  #sidebar-backdrop { display: block; }
+
+  /* Controls: fixed panel, hidden below screen by default */
+  #reader-controls {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    z-index: 59;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    padding: 10px 14px 14px;
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+    gap: 6px;
+    transform: translateY(100%);
+    transition: transform 0.24s cubic-bezier(0.32,0.72,0,1);
+    pointer-events: none;
+  }
+  #reader-controls.open {
+    transform: translateY(0);
+    pointer-events: all;
+  }
+
+  /* Show the toggle tab in reader view */
+  #view-reader.active #controls-tab { display: flex; }
+
+  .rts-stats { gap: 10px; }
+  .rts-stat  { font-size: 10px; }
+  #view-library { padding: 24px 20px 60px; }
+}
+
+/* ── Mobile (≤ 600px) ─────────────────────────────────────── */
+@media (max-width: 600px) {
+  :root { --topbar-h: 52px; --sidebar-w: 100vw; }
+
+  /* Topbar */
+  #topbar { padding: 0 10px; gap: 2px; }
+  .logo-label { display: none; }
+  .tb-sep { display: none; }
+  .tb-btn { padding: 0 10px; font-size: 12.5px; gap: 5px; }
+  .tb-btn-label { display: none; }
+  .theme-btn { width: 24px; height: 24px; }
+
+  /* Library */
+  #view-library { padding: 16px 12px 80px; }
+  .lib-title { font-size: 19px; }
+  .drop-zone { padding: 22px 16px; margin-bottom: 20px; }
+  .drop-icon { font-size: 24px; }
+  .book-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .book-remove { display: flex !important; }
+
+  /* Reader topstrip */
+  #reader-topstrip { padding: 0 8px; gap: 4px; }
+  #reader-topstrip .tb-sep { display: none; }
+  #reader-topstrip .tb-btn { padding: 0 8px; }
+  #reader-topstrip .tb-btn .rts-btn-label { display: none; }
+  #reader-topstrip .tb-btn svg { width: 18px; height: 18px; }
+  .rts-title { font-size: 12px; }
   .rts-stats { display: none; }
+
+  #reading-area { padding: 0 14px 24px; }
+  #reading-content { padding-top: 24px; }
+
+  /* Controls — two-row finger-friendly layout */
+  #reader-controls {
+    padding: 10px 12px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    flex-wrap: wrap; gap: 8px; row-gap: 8px;
+  }
+  .rc-btn { height: 40px; padding: 0 14px; font-size: 13px; }
+  .rc-spacer { display: none; }
+  #reader-controls > .rc-btn-bookmark {
+    order: 2; flex: 1; justify-content: center;
+    height: 40px; background: var(--accent-bg);
+    color: var(--accent); border-radius: var(--r); font-size: 13px;
+  }
+  #chapter-nav { order: 2; flex: 2; justify-content: space-between; }
+  #chapter-nav #prev-ch-btn,
+  #chapter-nav #next-ch-btn {
+    height: 40px; padding: 0 14px; font-size: 13px;
+    background: var(--bg-hover); border-radius: var(--r);
+  }
+  #chapter-nav #chapter-select {
+    flex: 1; height: 40px; font-size: 12px; max-width: none; min-width: 0;
+  }
+
+  /* Sidebar — full-width bottom sheet */
+  #sidebar {
+    width: 100vw !important;
+    border-right: none; border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.18);
+  }
+  .toc-item { padding: 11px 12px; font-size: 14px; }
+  .bm-item  { padding: 12px 12px; }
+  .bm-title { font-size: 13px; }
+
+  /* Toast clears the tab */
+  #toast { bottom: 52px; }
+}
+
+/* Very small phones (≤ 380px) */
+@media (max-width: 380px) {
+  .book-grid { gap: 10px; }
+  .rc-btn { padding: 0 9px; }
+  #chapter-nav #prev-ch-btn,
+  #chapter-nav #next-ch-btn { padding: 0 10px; }
 }
 </style>
 </head>
@@ -487,16 +633,16 @@ input, select { font-family: var(--font-ui); }
   <div id="topbar">
     <div class="logo">
       <div class="logo-flame"></div>
-      Hikari
+      <span class="logo-label">Hikari</span>
     </div>
     <div class="tb-sep"></div>
     <button class="tb-btn active" id="nav-library" onclick="showLibrary()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
-      Library
+      <span class="tb-btn-label">Library</span>
     </button>
     <button class="tb-btn" id="nav-bookmarks" onclick="showBookmarks()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
-      Bookmarks
+      <span class="tb-btn-label">Bookmarks</span>
     </button>
 
     <div class="tb-spacer"></div>
@@ -511,6 +657,7 @@ input, select { font-family: var(--font-ui); }
   <div id="body-area">
 
     <!-- SIDEBAR (TOC / Bookmarks) -->
+    <div id="sidebar-backdrop" onclick="hideSidebar()"></div>
     <div id="sidebar" class="collapsed">
       <div class="sidebar-header">
         <span id="sidebar-label">Table of Contents</span>
@@ -543,12 +690,12 @@ input, select { font-family: var(--font-ui); }
         <div id="reader-topstrip">
           <button class="tb-btn" style="padding:0 8px;gap:5px;color:var(--text-2);font-size:12.5px" onclick="closeReader()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
-            Library
+            <span class="rts-btn-label">Library</span>
           </button>
           <div class="tb-sep"></div>
           <button class="tb-btn" id="toc-toggle-btn" style="padding:0 8px;font-size:12.5px" onclick="toggleSidebar()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-            Contents
+            <span class="rts-btn-label">Contents</span>
           </button>
           <span class="rts-title" id="reader-chapter-title">—</span>
           <div class="rts-stats">
@@ -579,6 +726,13 @@ input, select { font-family: var(--font-ui); }
           </div>
         </div>
 
+        <!-- Controls toggle tab (mobile/tablet only) -->
+        <button id="controls-tab" onclick="toggleControls()" title="Toggle reader controls" aria-label="Toggle reader controls">
+          <svg id="controls-tab-icon" viewBox="0 0 24 10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3,8 12,2 21,8"/>
+          </svg>
+        </button>
+
         <!-- Bottom controls -->
         <div id="reader-controls">
           <div class="rc-group">
@@ -600,7 +754,7 @@ input, select { font-family: var(--font-ui); }
             <button class="rc-btn" onclick="adjustWidth(60)">⟩</button>
           </div>
           <div class="rc-spacer"></div>
-          <button class="rc-btn" onclick="addBookmark()" title="Bookmark current position (B)">
+          <button class="rc-btn rc-btn-bookmark" onclick="addBookmark()" title="Bookmark current position (B)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
             Bookmark
           </button>
@@ -893,7 +1047,7 @@ async function parseEpub(file) {
     }
 
     hideLoading();
-    return { id: Date.now() + Math.random(), title, author, cover: coverDataUrl,
+    return { id: String(Date.now()), title, author, cover: coverDataUrl,
              chapters, addedAt: Date.now(), progress: 0, lastChIdx: 0, lastScrollY: 0 };
   } catch(e) {
     hideLoading();
@@ -945,23 +1099,30 @@ function renderLibrary() {
         <div class="book-progress-bar">
           <div class="book-progress-fill" style="width:${pct}%"></div>
         </div>
-        <button class="book-remove" onclick="removeBook('${bk.id}',event)" title="Remove">×</button>
+        <button class="book-remove" data-id="${bk.id}" title="Remove">×</button>
       </div>
       <div class="book-card-meta">
         <div class="book-card-title">${esc(bk.title)}</div>
         <div class="book-card-author">${esc(bk.author)}</div>
       </div>`;
+    card.querySelector('.book-remove').addEventListener('click', e => {
+      e.stopPropagation();
+      removeBook(bk.id, e);
+    });
     card.addEventListener('click', () => openBook(bk.id));
     grid.appendChild(card);
   });
 }
 
 async function removeBook(id, e) {
-  e.stopPropagation();
-  library = library.filter(b => String(b.id) !== String(id));
-  // Also remove bookmarks for this book
-  bookmarks = bookmarks.filter(b => String(b.bookId) !== String(id));
-  try { await IDB.delete(id); } catch(err) { console.error('IDB delete failed:', err); }
+  if (e) e.stopPropagation();
+  const sid = String(id);
+  library = library.filter(b => String(b.id) !== sid);
+  bookmarks = bookmarks.filter(b => String(b.bookId) !== sid);
+  try { await IDB.delete(id); } catch(err) {
+    // Retry with string form in case key was stored as string
+    try { await IDB.delete(sid); } catch(e2) { console.error('IDB delete failed:', e2); }
+  }
   saveBookmarks();
   renderLibrary();
   toast('Book removed');
@@ -990,12 +1151,51 @@ async function openBook(id) {
   document.getElementById('view-library').classList.remove('active');
   document.getElementById('view-reader').classList.add('active');
 
+
   renderChapter(currentChIdx, bk.lastScrollY || 0);
+}
+
+// Controls toggle — only active on ≤900px; on desktop the panel is always visible in flow
+function isMobileControls() {
+  return window.matchMedia('(max-width: 900px)').matches;
+}
+
+function toggleControls() {
+  if (!isMobileControls()) return;
+  const panel = document.getElementById('reader-controls');
+  const tab   = document.getElementById('controls-tab');
+  const icon  = document.getElementById('controls-tab-icon');
+  const open  = panel.classList.toggle('open');
+  tab.classList.toggle('open', open);
+  // Flip chevron: up = closed (invite open), down = open (invite close)
+  icon.innerHTML = open
+    ? '<polyline points="3,2 12,8 21,2"/>'   // chevron-down
+    : '<polyline points="3,8 12,2 21,8"/>';  // chevron-up
+
+  // Give reading area room so last line isn't hidden under the panel
+  const ra = document.getElementById('reading-area');
+  if (ra) ra.style.paddingBottom = open ? (panel.offsetHeight + 40) + 'px' : '';
+}
+
+function closeControls() {
+  if (!isMobileControls()) return;
+  const panel = document.getElementById('reader-controls');
+  if (!panel.classList.contains('open')) return;
+  panel.classList.remove('open');
+  const tab  = document.getElementById('controls-tab');
+  const icon = document.getElementById('controls-tab-icon');
+  tab.classList.remove('open');
+
+  icon.innerHTML = '<polyline points="3,8 12,2 21,8"/>';
+  const ra = document.getElementById('reading-area');
+  if (ra) ra.style.paddingBottom = '';
 }
 
 function closeReader() {
   saveCurrentPosition();
+  closeControls();
   currentBook = null;
+
   document.getElementById('view-reader').classList.remove('active');
   document.getElementById('view-library').classList.add('active');
   document.getElementById('nav-library').classList.add('active');
@@ -1094,6 +1294,7 @@ let _saveScrollTimer = null;
 function onReadingScroll() {
   updateProgress();
   hideCtxMenu();
+  closeControls();
   // Throttle position saves to once per second while scrolling
   clearTimeout(_saveScrollTimer);
   _saveScrollTimer = setTimeout(() => saveCurrentPosition(), 1000);
@@ -1308,11 +1509,13 @@ function toggleSidebar() {
 }
 function showSidebar() {
   document.getElementById('sidebar').classList.remove('collapsed');
+  document.getElementById('sidebar-backdrop').classList.add('show');
   if (sidebarMode === 'toc') renderTOC();
   else renderBookmarksSidebar();
 }
 function hideSidebar() {
   document.getElementById('sidebar').classList.add('collapsed');
+  document.getElementById('sidebar-backdrop').classList.remove('show');
   sidebarMode = 'toc';
 }
 
@@ -1450,7 +1653,7 @@ document.addEventListener('keydown', e => {
     case 'PageUp':    if (!e.altKey) prevChapter(); break;
     case 'b': case 'B': addBookmark(); break;
     case 't': case 'T': toggleSidebar(); break;
-    case 'Escape': hideSidebar(); break;
+    case 'Escape': hideSidebar(); closeControls(); break;
     case '+': case '=': adjustFont(1); break;
     case '-': case '_': adjustFont(-1); break;
   }
@@ -1459,6 +1662,24 @@ document.addEventListener('keydown', e => {
 // Save position immediately when the user closes/refreshes the tab
 window.addEventListener('beforeunload', () => {
   saveCurrentPosition();
+});
+
+// Keep controls-tab visibility in sync if the user resizes across the 900px breakpoint
+window.addEventListener('resize', () => {
+  const tab = document.getElementById('controls-tab');
+  const inReader = document.getElementById('view-reader').classList.contains('active');
+  if (!inReader) return;
+  if (!isMobileControls()) {
+    // Desktop: ensure panel is always visible in flow, hide tab
+    const panel = document.getElementById('reader-controls');
+    panel.classList.remove('open');
+    panel.style.transform = '';  // let CSS rule take over (no fixed positioning)
+    tab.style.display = 'none';
+    const ra = document.getElementById('reading-area');
+    if (ra) ra.style.paddingBottom = '';
+  } else {
+    tab.style.display = 'flex';
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════
