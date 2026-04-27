@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hikari — Light Novel Reader</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3CradialGradient id='g' cx='50%25' cy='40%25' r='55%25'%3E%3Cstop offset='0%25' stop-color='%23ffe97a'/%3E%3Cstop offset='100%25' stop-color='%23f59e0b'/%3E%3C/radialGradient%3E%3C/defs%3E%3C!-- book body --%3E%3Crect x='5' y='4' width='18' height='24' rx='2' fill='%23fff8e7' stroke='%23d97706' stroke-width='1.2'/%3E%3C!-- spine --%3E%3Crect x='5' y='4' width='4' height='24' rx='1.5' fill='%23d97706'/%3E%3C!-- pages lines --%3E%3Cline x1='12' y1='10' x2='20' y2='10' stroke='%23d97706' stroke-width='1' stroke-linecap='round' opacity='.5'/%3E%3Cline x1='12' y1='13.5' x2='20' y2='13.5' stroke='%23d97706' stroke-width='1' stroke-linecap='round' opacity='.5'/%3E%3Cline x1='12' y1='17' x2='17' y2='17' stroke='%23d97706' stroke-width='1' stroke-linecap='round' opacity='.5'/%3E%3C!-- radiant glow / hikari burst --%3E%3Ccircle cx='22' cy='10' r='7' fill='url(%23g)' opacity='.92'/%3E%3C!-- rays --%3E%3Cg stroke='%23fbbf24' stroke-width='1.1' stroke-linecap='round' opacity='.85'%3E%3Cline x1='22' y1='1.5' x2='22' y2='3.5'/%3E%3Cline x1='22' y1='16.5' x2='22' y2='18.5'/%3E%3Cline x1='13.5' y1='10' x2='15.5' y2='10'/%3E%3Cline x1='28.5' y1='10' x2='30.5' y2='10'/%3E%3Cline x1='15.8' y1='3.8' x2='17.2' y2='5.2'/%3E%3Cline x1='26.8' y1='14.8' x2='28.2' y2='16.2'/%3E%3Cline x1='28.2' y1='3.8' x2='26.8' y2='5.2'/%3E%3Cline x1='17.2' y1='14.8' x2='15.8' y2='16.2'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+/* ── DESIGN TOKENS ─────────────────────────────────────────── */
+:root {
+  --bg:          #f7f5f0;
+  --bg-panel:    #ffffff;
+  --bg-sidebar:  #f0ede6;
+  --bg-hover:    #e8e4db;
+  --border:      #ddd9d0;
+  --border-mid:  #ccc8be;
+  --text:        #1a1814;
+  --text-2:      #5a5650;
+  --text-3:      #9a968f;
+  --accent:      #c0622a;
+  --accent-2:    #e07840;
+  --accent-bg:   #fdf0e8;
+  --reading-bg:  #faf8f4;
+  --reading-w:   680px;
+  --font-ui:     'DM Sans', sans-serif;
+  --font-read:   'Lora', Georgia, serif;
+  --font-mono:   'DM Mono', monospace;
+  --r:           6px;
+  --sidebar-w:   260px;
+  --topbar-h:    52px;
+  --trans:       0.18s ease;
+}
+[data-theme="dark"] {
+  --bg:          #141210;
+  --bg-panel:    #1c1a17;
+  --bg-sidebar:  #181610;
+  --bg-hover:    #252219;
+  --border:      #2e2b25;
+  --border-mid:  #3a3730;
+  --text:        #ede8df;
+  --text-2:      #9a9388;
+  --text-3:      #5a5550;
+  --accent:      #e07840;
+  --accent-2:    #f09050;
+  --accent-bg:   #281a10;
+  --reading-bg:  #161410;
+}
+[data-theme="sepia"] {
+  --bg:          #f4edd8;
+  --bg-panel:    #fdf6e3;
+  --bg-sidebar:  #ede4cc;
+  --bg-hover:    #e2d9c0;
+  --border:      #d4cab0;
+  --border-mid:  #c4ba9a;
+  --text:        #3a2e1a;
+  --text-2:      #6a5e42;
+  --text-3:      #9a8e72;
+  --reading-bg:  #fdf6e3;
+}
+
+/* ── RESET ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--font-ui); background: var(--bg); color: var(--text);
+       font-size: 14px; transition: background var(--trans), color var(--trans); }
+button { font-family: var(--font-ui); cursor: pointer; border: none; background: none; color: inherit; }
+input, select { font-family: var(--font-ui); }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+
+/* ── LAYOUT ─────────────────────────────────────────────────── */
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* ── TOPBAR ─────────────────────────────────────────────────── */
+#topbar {
+  height: var(--topbar-h); flex-shrink: 0;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 4px;
+  padding: 0 12px;
+  z-index: 100;
+}
+.logo {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 500; color: var(--text);
+  letter-spacing: -0.01em; margin-right: 8px;
+  padding: 0 6px;
+}
+.logo-flame {
+  width: 22px; height: 22px;
+  background: linear-gradient(160deg, var(--accent-2), var(--accent));
+  border-radius: 50% 50% 40% 40%;
+  flex-shrink: 0;
+}
+.tb-sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+.tb-btn {
+  height: 34px; padding: 0 12px; border-radius: var(--r);
+  font-size: 13px; font-weight: 400; color: var(--text-2);
+  display: flex; align-items: center; gap: 6px;
+  transition: background var(--trans), color var(--trans);
+  white-space: nowrap;
+}
+.tb-btn:hover { background: var(--bg-hover); color: var(--text); }
+.tb-btn.active { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
+.tb-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+.tb-spacer { flex: 1; }
+
+/* theme buttons */
+.theme-btn {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer;
+  transition: border-color var(--trans);
+  flex-shrink: 0;
+}
+.theme-btn:hover, .theme-btn.active { border-color: var(--accent); }
+
+/* ── BODY AREA ──────────────────────────────────────────────── */
+#body-area {
+  flex: 1; overflow: hidden;
+  display: flex;
+}
+
+/* ── SIDEBAR ────────────────────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  transition: width var(--trans), opacity var(--trans);
+}
+#sidebar.collapsed { width: 0; opacity: 0; pointer-events: none; }
+.sidebar-header {
+  padding: 14px 16px 10px;
+  font-size: 11px; font-weight: 500;
+  color: var(--text-3); letter-spacing: 0.08em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sidebar-scroll { flex: 1; overflow-y: auto; padding: 8px; }
+
+/* TOC items */
+.toc-item {
+  padding: 7px 10px; border-radius: 5px;
+  font-size: 13px; color: var(--text-2); cursor: pointer;
+  transition: background var(--trans), color var(--trans);
+  line-height: 1.4;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.toc-item:hover { background: var(--bg-hover); color: var(--text); }
+.toc-item.active { background: var(--accent-bg); color: var(--accent); font-weight: 500; }
+.toc-num {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--text-3); padding-top: 2px; flex-shrink: 0;
+}
+
+/* Bookmark items */
+.bm-item {
+  padding: 10px 10px; border-radius: 5px;
+  cursor: pointer; transition: background var(--trans);
+  border-bottom: 1px solid var(--border);
+}
+.bm-item:last-child { border-bottom: none; }
+.bm-item:hover { background: var(--bg-hover); }
+.bm-title { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 3px;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bm-excerpt { font-size: 12px; color: var(--text-3); line-height: 1.4;
+               display: -webkit-box; -webkit-line-clamp: 2;
+               -webkit-box-orient: vertical; overflow: hidden; font-style: italic; }
+.bm-meta { font-family: var(--font-mono); font-size: 10px; color: var(--text-3); margin-top: 4px; }
+.bm-delete-btn {
+  float: right; margin-left: 6px; margin-top: 2px;
+  font-size: 12px; color: var(--text-3); padding: 2px 4px;
+  border-radius: 3px; transition: color var(--trans), background var(--trans);
+}
+.bm-delete-btn:hover { color: #c0392b; background: #fef0ef; }
+
+/* ── MAIN CONTENT ───────────────────────────────────────────── */
+#main {
+  flex: 1; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+}
+
+/* ── VIEWS ──────────────────────────────────────────────────── */
+.view { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+.view.active { display: flex; }
+
+/* ── LIBRARY VIEW ───────────────────────────────────────────── */
+#view-library {
+  overflow-y: auto;
+  background: var(--bg);
+  padding: 32px 40px 60px;
+}
+.lib-header { margin-bottom: 28px; }
+.lib-title { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 4px; }
+.lib-sub { font-size: 13px; color: var(--text-3); }
+
+/* Drop zone */
+.drop-zone {
+  border: 1.5px dashed var(--border-mid);
+  border-radius: 10px; padding: 28px 24px;
+  text-align: center; cursor: pointer;
+  transition: border-color var(--trans), background var(--trans);
+  margin-bottom: 28px; position: relative;
+  background: var(--bg-panel);
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--accent); background: var(--accent-bg);
+}
+.drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.drop-icon { font-size: 28px; margin-bottom: 8px; }
+.drop-label { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+.drop-label b { color: var(--accent); font-weight: 500; }
+
+/* Book grid */
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 20px;
+}
+.book-card {
+  cursor: pointer; position: relative;
+  animation: fadeUp 0.25s ease both;
+}
+.book-card:hover .book-cover { box-shadow: 0 8px 24px rgba(0,0,0,0.18); transform: translateY(-3px); }
+.book-cover {
+  width: 100%; aspect-ratio: 2/3;
+  border-radius: 5px; overflow: hidden;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.book-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.book-cover-placeholder {
+  font-family: var(--font-read);
+  font-size: 12px; color: var(--text-3);
+  text-align: center; padding: 12px; line-height: 1.5;
+}
+.book-progress-bar {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+  background: rgba(0,0,0,0.1);
+}
+.book-progress-fill { height: 100%; background: var(--accent); }
+.book-card-meta { padding: 8px 2px 0; }
+.book-card-title {
+  font-size: 12.5px; font-weight: 500; line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+  margin-bottom: 2px;
+}
+.book-card-author { font-size: 11px; color: var(--text-3); }
+.book-remove {
+  position: absolute; top: 5px; right: 5px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(0,0,0,0.55); color: #fff;
+  font-size: 12px; display: none;
+  align-items: center; justify-content: center;
+  transition: background var(--trans);
+}
+.book-card:hover .book-remove { display: flex; }
+.book-remove:hover { background: #c0392b; }
+
+.empty-lib {
+  grid-column: 1/-1; text-align: center; padding: 60px 20px;
+  color: var(--text-3); font-size: 14px; line-height: 2;
+}
+.empty-lib-icon { font-size: 40px; opacity: 0.4; margin-bottom: 12px; }
+
+/* ── READER VIEW ────────────────────────────────────────────── */
+#view-reader {
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* reader inner layout */
+#reader-layout {
+  flex: 1; display: flex; overflow: hidden;
+}
+
+/* reading area */
+#reading-area {
+  flex: 1; overflow-y: auto;
+  background: var(--reading-bg);
+  display: flex; justify-content: center;
+  padding: 0 24px 80px;
+}
+
+#reading-content {
+  width: 100%; max-width: var(--reading-w);
+  padding-top: 40px;
+}
+
+/* reader top strip */
+#reader-topstrip {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  display: flex; align-items: center; gap: 8px;
+  height: 44px; flex-shrink: 0;
+}
+.rts-title {
+  font-size: 13px; color: var(--text-2); font-weight: 400;
+  flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rts-stats {
+  display: flex; align-items: center; gap: 14px; flex-shrink: 0;
+}
+.rts-stat {
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
+  display: flex; align-items: center; gap: 4px;
+}
+.rts-stat b { color: var(--text-2); font-weight: 400; }
+
+/* progress bar strip */
+#reader-progress-bar {
+  height: 3px; background: var(--border);
+  flex-shrink: 0; position: relative; cursor: pointer;
+}
+#reader-progress-fill {
+  height: 100%; background: var(--accent);
+  transition: width 0.2s;
+  pointer-events: none;
+}
+
+/* ── READER TYPOGRAPHY ──────────────────────────────────────── */
+#reading-content h1,
+#reading-content h2,
+#reading-content h3 {
+  font-family: var(--font-read);
+  font-weight: 600; line-height: 1.3;
+  color: var(--text); margin-bottom: 0.75em;
+  margin-top: 1.5em;
+}
+#reading-content h1 { font-size: 1.7em; border-bottom: 1px solid var(--border); padding-bottom: 0.4em; }
+#reading-content h2 { font-size: 1.3em; }
+#reading-content h3 { font-size: 1.1em; }
+#reading-content p {
+  font-family: var(--font-read);
+  font-size: var(--r-font-size, 17px);
+  line-height: var(--r-line-height, 1.85);
+  color: var(--text);
+  margin-bottom: 1.1em;
+  letter-spacing: 0.01em;
+}
+#reading-content img {
+  max-width: 100%; height: auto;
+  border-radius: 4px; display: block;
+  margin: 1.5em auto;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+}
+#reading-content a { color: var(--accent); text-decoration: none; }
+#reading-content a:hover { text-decoration: underline; }
+#reading-content blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 2px 16px; margin: 1.2em 0;
+  color: var(--text-2); font-style: italic;
+}
+#reading-content hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+#reading-content .chapter-title {
+  font-family: var(--font-read); font-size: 1.5em;
+  font-weight: 600; color: var(--text);
+  margin: 0 0 1.5em; padding-bottom: 0.6em;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── READER CONTROLS (bottom) ───────────────────────────────── */
+#reader-controls {
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  padding: 8px 16px;
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.rc-group { display: flex; align-items: center; gap: 4px; }
+.rc-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+.rc-btn {
+  height: 30px; padding: 0 10px; border-radius: 5px;
+  font-size: 12.5px; color: var(--text-2);
+  display: flex; align-items: center; gap: 5px;
+  transition: background var(--trans), color var(--trans);
+}
+.rc-btn:hover { background: var(--bg-hover); color: var(--text); }
+.rc-btn.active { background: var(--accent-bg); color: var(--accent); }
+.rc-label { font-size: 11px; color: var(--text-3); font-family: var(--font-mono); }
+.rc-spacer { flex: 1; }
+
+/* Font size control */
+.font-size-ctrl {
+  display: flex; align-items: center; gap: 6px;
+}
+.font-size-ctrl input[type=range] {
+  -webkit-appearance: none; width: 80px; height: 3px;
+  background: var(--border); border-radius: 2px; outline: none; cursor: pointer;
+  accent-color: var(--accent);
+}
+.font-size-ctrl input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 12px; height: 12px;
+  background: var(--accent); border-radius: 50%;
+}
+
+/* ── FLOATING BOOKMARK BUTTON ──────────────────────────────── */
+#fab-bookmark {
+  position: fixed; bottom: 68px; right: 24px;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 16px; box-shadow: 0 3px 12px rgba(0,0,0,0.2);
+  display: none; align-items: center; justify-content: center;
+  transition: transform 0.15s, box-shadow 0.15s;
+  z-index: 50;
+}
+#fab-bookmark:hover { transform: scale(1.08); box-shadow: 0 5px 18px rgba(0,0,0,0.28); }
+.view.active #fab-bookmark { display: flex; }
+
+/* ── TOAST ──────────────────────────────────────────────────── */
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: var(--bg-panel);
+  font-size: 12.5px; padding: 9px 18px; border-radius: 20px;
+  pointer-events: none; opacity: 0;
+  transition: opacity 0.2s; z-index: 9999;
+  white-space: nowrap;
+}
+#toast.show { opacity: 1; }
+
+/* ── LOADING ────────────────────────────────────────────────── */
+#loading-overlay {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px; z-index: 9000;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+#loading-overlay.show { opacity: 1; pointer-events: all; }
+.spinner {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+}
+.loading-text { font-size: 13px; color: var(--text-2); }
+
+/* ── CONTEXT MENU (text selection) ─────────────────────────── */
+#ctx-menu {
+  position: fixed; background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 7px; padding: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  display: none; z-index: 1000; gap: 2px;
+}
+#ctx-menu.show { display: flex; }
+.ctx-item {
+  padding: 6px 12px; border-radius: 4px;
+  font-size: 12.5px; color: var(--text); cursor: pointer;
+  transition: background var(--trans);
+  white-space: nowrap;
+}
+.ctx-item:hover { background: var(--bg-hover); }
+
+/* ── KEYFRAMES ──────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── RESPONSIVE ─────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  #view-library { padding: 20px 16px 40px; }
+  :root { --sidebar-w: 220px; }
+  .rts-stats { display: none; }
+}
+</style>
+</head>
+<body data-theme="light">
+<div id="app">
+
+  <!-- ── TOPBAR ─────────────────────────────────────────────── -->
+  <div id="topbar">
+    <div class="logo">
+      <div class="logo-flame"></div>
+      Hikari
+    </div>
+    <div class="tb-sep"></div>
+    <button class="tb-btn active" id="nav-library" onclick="showLibrary()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      Library
+    </button>
+    <button class="tb-btn" id="nav-bookmarks" onclick="showBookmarks()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+      Bookmarks
+    </button>
+
+    <div class="tb-spacer"></div>
+
+    <!-- Theme swatches -->
+    <button class="theme-btn active" style="background:#f7f5f0" title="Light" onclick="setTheme('light',this)"></button>
+    <button class="theme-btn" style="background:#f4edd8" title="Sepia" onclick="setTheme('sepia',this)"></button>
+    <button class="theme-btn" style="background:#1c1a17" title="Dark" onclick="setTheme('dark',this)"></button>
+  </div>
+
+  <!-- ── BODY AREA ──────────────────────────────────────────── -->
+  <div id="body-area">
+
+    <!-- SIDEBAR (TOC / Bookmarks) -->
+    <div id="sidebar" class="collapsed">
+      <div class="sidebar-header">
+        <span id="sidebar-label">Table of Contents</span>
+        <button style="font-size:16px;color:var(--text-3)" onclick="toggleSidebar()">×</button>
+      </div>
+      <div class="sidebar-scroll" id="sidebar-content"></div>
+    </div>
+
+    <!-- MAIN -->
+    <div id="main">
+
+      <!-- LIBRARY VIEW -->
+      <div id="view-library" class="view active">
+        <div class="lib-header">
+          <div class="lib-title">Your Library</div>
+          <div class="lib-sub">Light Novel Collection · <span id="lib-count">0</span> books</div>
+        </div>
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" accept=".epub" multiple>
+          <div class="drop-icon">📚</div>
+          <div class="drop-label">Drop <b>.epub</b> files here, or <b>click to browse</b></div>
+        </div>
+        <div class="book-grid" id="bookGrid"></div>
+      </div>
+
+      <!-- READER VIEW -->
+      <div id="view-reader" class="view">
+
+        <!-- Top info strip -->
+        <div id="reader-topstrip">
+          <button class="tb-btn" style="padding:0 8px;gap:5px;color:var(--text-2);font-size:12.5px" onclick="closeReader()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
+            Library
+          </button>
+          <div class="tb-sep"></div>
+          <button class="tb-btn" id="toc-toggle-btn" style="padding:0 8px;font-size:12.5px" onclick="toggleSidebar()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            Contents
+          </button>
+          <span class="rts-title" id="reader-chapter-title">—</span>
+          <div class="rts-stats">
+            <div class="rts-stat" title="Word count">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4,7 4,4 20,4 20,7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+              <b id="stat-words">—</b> words
+            </div>
+            <div class="rts-stat" title="Estimated read time">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+              ~<b id="stat-read-time">—</b> min read
+            </div>
+            <div class="rts-stat" title="Progress">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+              <b id="stat-progress">0</b>%
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div id="reader-progress-bar" onclick="scrubProgress(event)">
+          <div id="reader-progress-fill" style="width:0%"></div>
+        </div>
+
+        <!-- Layout: sidebar + reading area -->
+        <div id="reader-layout">
+          <div id="reading-area" onscroll="onReadingScroll()">
+            <div id="reading-content"></div>
+          </div>
+        </div>
+
+        <!-- Bottom controls -->
+        <div id="reader-controls">
+          <div class="rc-group">
+            <span class="rc-label">Font</span>
+            <button class="rc-btn" onclick="adjustFont(-1)">A−</button>
+            <span id="font-size-display" class="rc-label" style="min-width:32px;text-align:center">17</span>
+            <button class="rc-btn" onclick="adjustFont(1)">A+</button>
+          </div>
+          <div class="rc-sep"></div>
+          <div class="rc-group">
+            <span class="rc-label">Spacing</span>
+            <button class="rc-btn" onclick="adjustLine(-0.1)">≡−</button>
+            <button class="rc-btn" onclick="adjustLine(0.1)">≡+</button>
+          </div>
+          <div class="rc-sep"></div>
+          <div class="rc-group">
+            <span class="rc-label">Width</span>
+            <button class="rc-btn" onclick="adjustWidth(-60)">⟨</button>
+            <button class="rc-btn" onclick="adjustWidth(60)">⟩</button>
+          </div>
+          <div class="rc-spacer"></div>
+          <button class="rc-btn" onclick="addBookmark()" title="Bookmark current position (B)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+            Bookmark
+          </button>
+          <div class="rc-sep"></div>
+          <div id="chapter-nav" class="rc-group" style="gap:4px">
+            <button class="rc-btn" id="prev-ch-btn" onclick="prevChapter()">← Prev</button>
+            <select id="chapter-select" onchange="goToChapterByIndex(this.value)"
+              style="height:30px;background:var(--bg);border:1px solid var(--border);
+                     border-radius:5px;font-size:12px;color:var(--text);padding:0 8px;
+                     max-width:200px;cursor:pointer">
+            </select>
+            <button class="rc-btn" id="next-ch-btn" onclick="nextChapter()">Next →</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /body-area -->
+</div><!-- /app -->
+
+<!-- ── CONTEXT MENU ─────────────────────────────────────────── -->
+<div id="ctx-menu">
+  <div class="ctx-item" onclick="bookmarkSelection()">🔖 Bookmark selection</div>
+</div>
+
+<!-- ── TOAST ────────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<!-- ── LOADING ──────────────────────────────────────────────── -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Loading…</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════════════
+//  INDEXEDDB — replaces localStorage for the library
+//  (bookmarks & prefs stay in localStorage — they're tiny)
+// ═══════════════════════════════════════════════════════════════
+const IDB = (() => {
+  const DB_NAME    = 'hikari_db';
+  const DB_VERSION = 1;
+  const STORE      = 'books';
+  let _db = null;
+
+  function open() {
+    if (_db) return Promise.resolve(_db);
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = e => {
+        e.target.result.createObjectStore(STORE, { keyPath: 'id' });
+      };
+      req.onsuccess = e => { _db = e.target.result; resolve(_db); };
+      req.onerror   = e => reject(e.target.error);
+    });
+  }
+
+  function tx(mode) {
+    return open().then(db => db.transaction(STORE, mode).objectStore(STORE));
+  }
+
+  return {
+    getAll() {
+      return tx('readonly').then(store => new Promise((res, rej) => {
+        const req = store.getAll();
+        req.onsuccess = () => res(req.result);
+        req.onerror   = () => rej(req.error);
+      }));
+    },
+    put(book) {
+      return tx('readwrite').then(store => new Promise((res, rej) => {
+        const req = store.put(book);
+        req.onsuccess = () => res();
+        req.onerror   = () => rej(req.error);
+      }));
+    },
+    delete(id) {
+      return tx('readwrite').then(store => new Promise((res, rej) => {
+        const req = store.delete(id);
+        req.onsuccess = () => res();
+        req.onerror   = () => rej(req.error);
+      }));
+    }
+  };
+})();
+
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+let library    = [];   // loaded async from IndexedDB on init
+let bookmarks  = JSON.parse(localStorage.getItem('hikari_bookmarks') || '[]');
+let prefs      = JSON.parse(localStorage.getItem('hikari_prefs')     || '{}');
+
+let currentBook    = null;   // full parsed book object
+let currentChIdx   = 0;
+let currentChapters = [];    // [{id, title, href, content, images:{href:dataUrl}}]
+let sidebarMode    = 'toc';  // 'toc' | 'bookmarks'
+let fontSize       = prefs.fontSize   || 17;
+let lineHeight     = prefs.lineHeight || 1.85;
+let readingWidth   = prefs.readingWidth || 680;
+
+applyReadingPrefs();
+
+// ═══════════════════════════════════════════════════════════════
+//  EPUB PARSER
+// ═══════════════════════════════════════════════════════════════
+async function parseEpub(file) {
+  showLoading('Parsing ' + file.name + '…');
+  try {
+    const ab  = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(ab);
+
+    // 1. container.xml → OPF path
+    const containerXml = await zip.file('META-INF/container.xml').async('text');
+    const cdoc   = new DOMParser().parseFromString(containerXml, 'application/xml');
+    const opfPath = cdoc.querySelector('rootfile').getAttribute('full-path');
+    const opfBase = opfPath.includes('/') ? opfPath.substring(0, opfPath.lastIndexOf('/') + 1) : '';
+
+    // 2. Parse OPF
+    const opfText = await zip.file(opfPath).async('text');
+    const odoc    = new DOMParser().parseFromString(opfText, 'application/xml');
+
+    const title  = odoc.querySelector('title')?.textContent?.trim()   || file.name.replace('.epub','');
+    const author = odoc.querySelector('creator')?.textContent?.trim() || 'Unknown';
+
+    // 3. Manifest
+    const manifest = {};
+    odoc.querySelectorAll('manifest item').forEach(item => {
+      manifest[item.getAttribute('id')] = {
+        href:      item.getAttribute('href'),
+        mediaType: item.getAttribute('media-type') || ''
+      };
+    });
+
+    // 4. Resolve image assets
+    const imageCache = {}; // normalized-href → dataUrl
+    const imageExts  = /\.(jpg|jpeg|png|gif|svg|webp)$/i;
+
+    async function resolveHref(href) {
+      // href relative to opfBase
+      const segments = (opfBase + href).split('/');
+      const norm = [];
+      for (const s of segments) {
+        if (s === '..') norm.pop();
+        else if (s && s !== '.') norm.push(s);
+      }
+      return norm.join('/');
+    }
+
+    async function getImage(relHref, chapterBase) {
+      // relHref is relative to the chapter file
+      const full = await resolveRelative(relHref, chapterBase);
+      if (imageCache[full]) return imageCache[full];
+      const f = zip.file(full) || zip.file(relHref);
+      if (!f) return null;
+      const b64 = await f.async('base64');
+      const ext  = full.split('.').pop().toLowerCase();
+      const mime = ext === 'svg' ? 'image/svg+xml'
+                 : ext === 'png' ? 'image/png'
+                 : ext === 'gif' ? 'image/gif'
+                 : ext === 'webp'? 'image/webp'
+                 : 'image/jpeg';
+      const url  = `data:${mime};base64,${b64}`;
+      imageCache[full] = url;
+      return url;
+    }
+
+    async function resolveRelative(relHref, base) {
+      // base: directory of the chapter (e.g. "OEBPS/Text/")
+      const combined = base + relHref;
+      const parts = combined.split('/');
+      const out = [];
+      for (const p of parts) {
+        if (p === '..') out.pop();
+        else if (p && p !== '.') out.push(p);
+      }
+      return out.join('/');
+    }
+
+    // 5. Cover
+    let coverDataUrl = null;
+    const coverId = odoc.querySelector('meta[name="cover"]')?.getAttribute('content');
+    if (coverId && manifest[coverId]) {
+      const coverHref = await resolveHref(manifest[coverId].href);
+      const cf = zip.file(coverHref);
+      if (cf) {
+        const b64  = await cf.async('base64');
+        const mime = manifest[coverId].mediaType || 'image/jpeg';
+        coverDataUrl = `data:${mime};base64,${b64}`;
+      }
+    }
+    // fallback: look for item with id containing 'cover'
+    if (!coverDataUrl) {
+      for (const [id, item] of Object.entries(manifest)) {
+        if (/cover/i.test(id) && item.mediaType.startsWith('image/')) {
+          const href = await resolveHref(item.href);
+          const cf   = zip.file(href);
+          if (cf) {
+            const b64 = await cf.async('base64');
+            coverDataUrl = `data:${item.mediaType};base64,${b64}`;
+            break;
+          }
+        }
+      }
+    }
+
+    // 6. TOC (NCX or nav)
+    let tocItems = []; // [{id, title, href}]
+
+    // Try NCX first
+    const ncxId  = odoc.querySelector('spine')?.getAttribute('toc');
+    const ncxItem = ncxId ? manifest[ncxId] : null;
+    if (ncxItem) {
+      const ncxPath = await resolveHref(ncxItem.href);
+      const ncxF    = zip.file(ncxPath);
+      if (ncxF) {
+        const ncxText = await ncxF.async('text');
+        const ndoc    = new DOMParser().parseFromString(ncxText, 'application/xml');
+        ndoc.querySelectorAll('navPoint').forEach(np => {
+          const label = np.querySelector('navLabel text')?.textContent?.trim() || '';
+          const src   = np.querySelector('content')?.getAttribute('src') || '';
+          const srcClean = src.split('#')[0];
+          tocItems.push({ title: label, href: srcClean });
+        });
+      }
+    }
+
+    // 7. Spine → chapters in order
+    const spineIds = [...odoc.querySelectorAll('spine itemref')]
+      .map(r => r.getAttribute('idref'))
+      .filter(id => manifest[id]);
+
+    showLoading(`Loading chapters… (0/${spineIds.length})`);
+    const chapters = [];
+    for (let i = 0; i < spineIds.length; i++) {
+      const id   = spineIds[i];
+      const item = manifest[id];
+      if (!item.mediaType.includes('xhtml') && !item.mediaType.includes('html')) continue;
+
+      showLoading(`Loading chapters… (${i+1}/${spineIds.length})`);
+
+      const chHref = await resolveHref(item.href);
+      const chBase = chHref.includes('/') ? chHref.substring(0, chHref.lastIndexOf('/') + 1) : '';
+      const chFile = zip.file(chHref);
+      if (!chFile) continue;
+
+      const chText = await chFile.async('text');
+      const cdocCh = new DOMParser().parseFromString(chText, 'text/html');
+
+      // Inline all images
+      const imgs = cdocCh.querySelectorAll('img, image');
+      for (const img of imgs) {
+        const srcAttr = img.getAttribute('src') || img.getAttributeNS('http://www.w3.org/1999/xlink','href') || '';
+        if (!srcAttr || srcAttr.startsWith('data:')) continue;
+        const dataUrl = await getImage(srcAttr, chBase);
+        if (dataUrl) {
+          img.setAttribute('src', dataUrl);
+          img.removeAttribute('srcset');
+        }
+      }
+
+      // Get body content
+      const body = cdocCh.body?.innerHTML || '';
+      if (!body.trim()) continue;
+
+      // Try to find a title
+      const chTitle = cdocCh.querySelector('h1,h2,h3,title')?.textContent?.trim()
+        || tocItems.find(t => t.href === item.href)?.title
+        || `Chapter ${chapters.length + 1}`;
+
+      chapters.push({
+        id:       id,
+        href:     item.href,
+        title:    chTitle,
+        bodyHtml: body,
+        wordCount: countWords(cdocCh.body?.textContent || '')
+      });
+    }
+
+    // Merge TOC titles into chapters if we have proper NCX
+    if (tocItems.length > 0) {
+      chapters.forEach(ch => {
+        const match = tocItems.find(t =>
+          ch.href.endsWith(t.href) || t.href.endsWith(ch.href) || ch.href === t.href
+        );
+        if (match && match.title) ch.title = match.title;
+      });
+    }
+
+    hideLoading();
+    return { id: Date.now() + Math.random(), title, author, cover: coverDataUrl,
+             chapters, addedAt: Date.now(), progress: 0, lastChIdx: 0, lastScrollY: 0 };
+  } catch(e) {
+    hideLoading();
+    toast('Error: ' + e.message);
+    console.error(e);
+    return null;
+  }
+}
+
+function countWords(text) {
+  return (text.trim().match(/\S+/g) || []).length;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LIBRARY
+// ═══════════════════════════════════════════════════════════════
+// saveLibrary: upserts one book into IndexedDB.
+async function saveLibrary(book) {
+  if (!book) return;
+  try { await IDB.put(book); }
+  catch(e) { console.error('IDB put failed:', e); toast('Storage error — book may not be saved'); }
+}
+function saveBookmarks() { localStorage.setItem('hikari_bookmarks', JSON.stringify(bookmarks)); }
+function savePrefs()     { localStorage.setItem('hikari_prefs',     JSON.stringify(prefs)); }
+
+function renderLibrary() {
+  const grid = document.getElementById('bookGrid');
+  document.getElementById('lib-count').textContent = library.length;
+
+  if (!library.length) {
+    grid.innerHTML = `<div class="empty-lib">
+      <div class="empty-lib-icon">📖</div>
+      <div>No books yet.<br>Drop an <b>.epub</b> file above to get started.</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = '';
+  library.forEach((bk, i) => {
+    const pct = Math.round((bk.progress || 0) * 100);
+    const card = document.createElement('div');
+    card.className = 'book-card';
+    card.style.animationDelay = Math.min(i * 0.04, 0.4) + 's';
+    card.innerHTML = `
+      <div class="book-cover">
+        ${bk.cover
+          ? `<img src="${bk.cover}" alt="${esc(bk.title)}">`
+          : `<div class="book-cover-placeholder">${esc(bk.title)}</div>`}
+        <div class="book-progress-bar">
+          <div class="book-progress-fill" style="width:${pct}%"></div>
+        </div>
+        <button class="book-remove" onclick="removeBook('${bk.id}',event)" title="Remove">×</button>
+      </div>
+      <div class="book-card-meta">
+        <div class="book-card-title">${esc(bk.title)}</div>
+        <div class="book-card-author">${esc(bk.author)}</div>
+      </div>`;
+    card.addEventListener('click', () => openBook(bk.id));
+    grid.appendChild(card);
+  });
+}
+
+async function removeBook(id, e) {
+  e.stopPropagation();
+  library = library.filter(b => String(b.id) !== String(id));
+  // Also remove bookmarks for this book
+  bookmarks = bookmarks.filter(b => String(b.bookId) !== String(id));
+  try { await IDB.delete(id); } catch(err) { console.error('IDB delete failed:', err); }
+  saveBookmarks();
+  renderLibrary();
+  toast('Book removed');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  OPEN / CLOSE BOOK
+// ═══════════════════════════════════════════════════════════════
+async function openBook(id) {
+  const bk = library.find(b => String(b.id) === String(id));
+  if (!bk) return;
+  currentBook     = bk;
+  currentChapters = bk.chapters;
+  currentChIdx    = bk.lastChIdx || 0;
+
+  // Populate chapter select
+  const sel = document.getElementById('chapter-select');
+  sel.innerHTML = currentChapters.map((ch, i) =>
+    `<option value="${i}">${i+1}. ${esc(ch.title.substring(0, 50))}</option>`
+  ).join('');
+
+  // Populate TOC sidebar
+  renderTOC();
+
+  document.getElementById('nav-library').classList.remove('active');
+  document.getElementById('view-library').classList.remove('active');
+  document.getElementById('view-reader').classList.add('active');
+
+  renderChapter(currentChIdx, bk.lastScrollY || 0);
+}
+
+function closeReader() {
+  saveCurrentPosition();
+  currentBook = null;
+  document.getElementById('view-reader').classList.remove('active');
+  document.getElementById('view-library').classList.add('active');
+  document.getElementById('nav-library').classList.add('active');
+  document.getElementById('nav-bookmarks').classList.remove('active');
+  hideSidebar();
+  renderLibrary();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDER CHAPTER
+// ═══════════════════════════════════════════════════════════════
+function renderChapter(idx, scrollY = 0) {
+  if (!currentChapters[idx]) return;
+  currentChIdx = idx;
+  const ch = currentChapters[idx];
+
+  document.getElementById('chapter-select').value = idx;
+  document.getElementById('reader-chapter-title').textContent = ch.title;
+
+  // Word count & read time
+  const wc = ch.wordCount || 0;
+  const rt = Math.max(1, Math.round(wc / 250));
+  document.getElementById('stat-words').textContent = wc.toLocaleString();
+  document.getElementById('stat-read-time').textContent = rt;
+
+  // Set content — sanitize by removing scripts
+  const wrap = document.getElementById('reading-content');
+  wrap.innerHTML = `<div class="chapter-title">${esc(ch.title)}</div>` + sanitizeHtml(ch.bodyHtml);
+
+  // Scroll to position — defer until after the browser has laid out the new content,
+  // otherwise scrollTop gets clamped to 0 because scrollHeight isn't updated yet.
+  const ra = document.getElementById('reading-area');
+  ra.scrollTop = 0;
+  if (scrollY > 0) {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      ra.scrollTop = scrollY;
+      updateProgress();
+    }));
+  } else {
+    updateProgress();
+  }
+
+  // Update prev/next buttons
+  document.getElementById('prev-ch-btn').disabled = idx === 0;
+  document.getElementById('next-ch-btn').disabled = idx === currentChapters.length - 1;
+
+  // Highlight active TOC
+  document.querySelectorAll('.toc-item').forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+  });
+}
+
+function sanitizeHtml(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  // Remove scripts, objects, iframes
+  tmp.querySelectorAll('script,object,iframe,embed').forEach(el => el.remove());
+  // Remove on* attributes
+  tmp.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(attr => {
+      if (attr.name.startsWith('on')) el.removeAttribute(attr.name);
+    });
+    // Fix internal links — disable them
+    if (el.tagName === 'A') {
+      const href = el.getAttribute('href') || '';
+      if (!href.startsWith('#')) {
+        el.removeAttribute('href');
+        el.style.cursor = 'default';
+      }
+    }
+  });
+  return tmp.innerHTML;
+}
+
+function nextChapter() {
+  if (currentChIdx < currentChapters.length - 1) {
+    saveCurrentPosition();
+    renderChapter(currentChIdx + 1, 0);
+  }
+}
+function prevChapter() {
+  if (currentChIdx > 0) {
+    saveCurrentPosition();
+    renderChapter(currentChIdx - 1, 0);
+  }
+}
+function goToChapterByIndex(idx) {
+  saveCurrentPosition();
+  renderChapter(parseInt(idx), 0);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PROGRESS
+// ═══════════════════════════════════════════════════════════════
+let _saveScrollTimer = null;
+function onReadingScroll() {
+  updateProgress();
+  hideCtxMenu();
+  // Throttle position saves to once per second while scrolling
+  clearTimeout(_saveScrollTimer);
+  _saveScrollTimer = setTimeout(() => saveCurrentPosition(), 1000);
+}
+
+function updateProgress() {
+  const ra = document.getElementById('reading-area');
+  const maxScroll = ra.scrollHeight - ra.clientHeight;
+  if (maxScroll <= 0) return;
+  const pct = ra.scrollTop / maxScroll;
+
+  // Chapter progress bar
+  document.getElementById('reader-progress-fill').style.width = (pct * 100) + '%';
+
+  // Global progress weighted by word count so long chapters count more than short ones
+  const totalWords = currentChapters.reduce((s, ch) => s + (ch.wordCount || 0), 0);
+  let globalPct;
+  if (totalWords > 0) {
+    const wordsBefore = currentChapters
+      .slice(0, currentChIdx)
+      .reduce((s, ch) => s + (ch.wordCount || 0), 0);
+    const wordsThisCh = currentChapters[currentChIdx]?.wordCount || 0;
+    globalPct = (wordsBefore + wordsThisCh * pct) / totalWords;
+  } else {
+    // Fallback if word counts are missing
+    globalPct = currentChapters.length > 1
+      ? (currentChIdx + pct) / currentChapters.length
+      : pct;
+  }
+  document.getElementById('stat-progress').textContent = Math.round(globalPct * 100);
+
+  // Save global to book
+  if (currentBook) currentBook.progress = globalPct;
+}
+
+function scrubProgress(e) {
+  const bar = document.getElementById('reader-progress-bar');
+  const pct = e.offsetX / bar.clientWidth;
+  const ra  = document.getElementById('reading-area');
+  ra.scrollTop = pct * (ra.scrollHeight - ra.clientHeight);
+}
+
+function saveCurrentPosition() {
+  if (!currentBook) return;
+  const ra = document.getElementById('reading-area');
+  currentBook.lastChIdx   = currentChIdx;
+  currentBook.lastScrollY = ra.scrollTop;
+  const idx = library.findIndex(b => String(b.id) === String(currentBook.id));
+  if (idx > -1) { library[idx] = currentBook; saveLibrary(currentBook); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BOOKMARKS
+// ═══════════════════════════════════════════════════════════════
+function addBookmark(selText) {
+  if (!currentBook) return;
+  const ra  = document.getElementById('reading-area');
+  const ch  = currentChapters[currentChIdx];
+
+  let excerpt;
+  if (selText) {
+    // Use the selected text directly, trimmed to 200 chars
+    excerpt = selText.length > 200 ? selText.substring(0, 200).trimEnd() + '…' : selText;
+  } else {
+    // Find the first visible paragraph at the current scroll position
+    const nearby = getVisibleText(ra);
+    excerpt = nearby.length > 140 ? nearby.substring(0, 140).trimEnd() + '…' : nearby;
+  }
+
+  const bm = {
+    id:           Date.now(),
+    bookId:       String(currentBook.id),
+    bookTitle:    currentBook.title,
+    chapterIdx:   currentChIdx,
+    chapterTitle: ch?.title || '',
+    scrollY:      ra.scrollTop,
+    excerpt,
+    date:         new Date().toISOString()
+  };
+  bookmarks.unshift(bm);
+  saveBookmarks();
+  toast('Bookmark saved');
+}
+
+function bookmarkSelection() {
+  const sel = window.getSelection()?.toString()?.trim();
+  if (sel) addBookmark(sel);
+  else addBookmark();
+  hideCtxMenu();
+}
+
+function getVisibleText(container) {
+  // Find the first text-bearing element visible at the current scroll position.
+  const ra = document.getElementById('reading-area');
+  const content = document.getElementById('reading-content');
+  if (!content) return '';
+
+  const scrollTop = ra.scrollTop;
+  const raTop = ra.getBoundingClientRect().top;
+
+  // Walk leaf-level text elements in document order
+  const candidates = content.querySelectorAll('p, li, h1, h2, h3, h4, blockquote, td');
+  for (const el of candidates) {
+    const text = el.textContent.trim();
+    if (!text || text.length < 10) continue;
+    // Element's top relative to the scroll container
+    const elTop = el.getBoundingClientRect().top - raTop + scrollTop;
+    if (elTop >= scrollTop - 4) {   // small tolerance for rounding
+      return text;
+    }
+  }
+
+  // Fallback: beginning of chapter text
+  return content.textContent.trim();
+}
+
+function renderBookmarksSidebar() {
+  const sc = document.getElementById('sidebar-content');
+  document.getElementById('sidebar-label').textContent = 'Bookmarks';
+
+  if (!bookmarks.length) {
+    sc.innerHTML = `<div style="padding:24px 12px;text-align:center;color:var(--text-3);font-size:13px;line-height:1.7">
+      No bookmarks yet.<br>Press <b>B</b> or click Bookmark while reading.
+    </div>`;
+    return;
+  }
+
+  // Filter to current book if in reader
+  const bms = currentBook
+    ? bookmarks.filter(b => b.bookId === String(currentBook.id))
+    : bookmarks;
+
+  sc.innerHTML = '';
+  bms.forEach(bm => {
+    const d = new Date(bm.date);
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const el = document.createElement('div');
+    el.className = 'bm-item';
+    el.innerHTML = `
+      <button class="bm-delete-btn" onclick="deleteBm(${bm.id},event)" title="Delete">✕</button>
+      <div class="bm-title">${esc(bm.bookTitle)}</div>
+      <div class="bm-excerpt">${esc(bm.excerpt || '—')}</div>
+      <div class="bm-meta">${esc(bm.chapterTitle)} · ${dateStr}</div>`;
+    el.addEventListener('click', e => {
+      if (e.target.classList.contains('bm-delete-btn')) return;
+      jumpToBm(bm);
+    });
+    sc.appendChild(el);
+  });
+}
+
+function deleteBm(id, e) {
+  e.stopPropagation();
+  bookmarks = bookmarks.filter(b => b.id !== id);
+  saveBookmarks();
+  renderBookmarksSidebar();
+}
+
+function jumpToBm(bm) {
+  const bk = library.find(b => String(b.id) === bm.bookId);
+  if (!bk) { toast('Book not in library'); return; }
+  if (!currentBook || String(currentBook.id) !== bm.bookId) {
+    openBook(bm.bookId).then(() => {
+      renderChapter(bm.chapterIdx, bm.scrollY);
+    });
+    return;
+  }
+  renderChapter(bm.chapterIdx, bm.scrollY);
+  hideSidebar();
+}
+
+// Global bookmarks view (from topbar)
+function showBookmarks() {
+  document.getElementById('nav-library').classList.remove('active');
+  document.getElementById('nav-bookmarks').classList.add('active');
+  sidebarMode = 'bookmarks';
+  showSidebar();
+  renderBookmarksSidebar();
+}
+
+function showLibrary() {
+  closeReader();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TOC SIDEBAR
+// ═══════════════════════════════════════════════════════════════
+function renderTOC() {
+  const sc = document.getElementById('sidebar-content');
+  document.getElementById('sidebar-label').textContent = 'Contents';
+  sc.innerHTML = '';
+  currentChapters.forEach((ch, i) => {
+    const el = document.createElement('div');
+    el.className = 'toc-item' + (i === currentChIdx ? ' active' : '');
+    el.innerHTML = `<span class="toc-num">${String(i+1).padStart(2,'0')}</span>${esc(ch.title)}`;
+    el.addEventListener('click', () => {
+      saveCurrentPosition();
+      renderChapter(i, 0);
+    });
+    sc.appendChild(el);
+  });
+}
+
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  if (sb.classList.contains('collapsed')) {
+    sidebarMode = 'toc';
+    showSidebar();
+  } else {
+    hideSidebar();
+  }
+}
+function showSidebar() {
+  document.getElementById('sidebar').classList.remove('collapsed');
+  if (sidebarMode === 'toc') renderTOC();
+  else renderBookmarksSidebar();
+}
+function hideSidebar() {
+  document.getElementById('sidebar').classList.add('collapsed');
+  sidebarMode = 'toc';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  READING PREFERENCES
+// ═══════════════════════════════════════════════════════════════
+function applyReadingPrefs() {
+  document.documentElement.style.setProperty('--r-font-size',   fontSize   + 'px');
+  document.documentElement.style.setProperty('--r-line-height', lineHeight);
+  document.documentElement.style.setProperty('--reading-w',     readingWidth + 'px');
+  const fsd = document.getElementById('font-size-display');
+  if (fsd) fsd.textContent = fontSize;
+}
+
+function adjustFont(delta) {
+  fontSize = Math.min(28, Math.max(13, fontSize + delta));
+  prefs.fontSize = fontSize; savePrefs();
+  applyReadingPrefs();
+}
+function adjustLine(delta) {
+  lineHeight = Math.min(3.0, Math.max(1.2, +(lineHeight + delta).toFixed(1)));
+  prefs.lineHeight = lineHeight; savePrefs();
+  applyReadingPrefs();
+}
+function adjustWidth(delta) {
+  readingWidth = Math.min(960, Math.max(400, readingWidth + delta));
+  prefs.readingWidth = readingWidth; savePrefs();
+  applyReadingPrefs();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════════════════════════════
+function setTheme(t, btn) {
+  document.body.dataset.theme = t;
+  prefs.theme = t; savePrefs();
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+// Restore theme
+if (prefs.theme) {
+  document.body.dataset.theme = prefs.theme;
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    if (btn.title.toLowerCase() === prefs.theme) btn.classList.add('active');
+    else btn.classList.remove('active');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FILE INPUT
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('fileInput').addEventListener('change', async e => {
+  for (const f of e.target.files) {
+    if (!f.name.endsWith('.epub')) continue;
+    const parsed = await parseEpub(f);
+    if (parsed) { library.push(parsed); await saveLibrary(parsed); }
+  }
+  renderLibrary();
+  e.target.value = '';
+});
+
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', async e => {
+  e.preventDefault(); dz.classList.remove('drag-over');
+  for (const f of e.dataTransfer.files) {
+    if (!f.name.endsWith('.epub')) continue;
+    const parsed = await parseEpub(f);
+    if (parsed) { library.push(parsed); await saveLibrary(parsed); }
+  }
+  renderLibrary();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  CONTEXT MENU (text selection → bookmark)
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('reading-content').addEventListener('mouseup', e => {
+  setTimeout(() => {
+    const sel = window.getSelection()?.toString()?.trim();
+    if (sel && sel.length > 3) showCtxMenu(e.clientX, e.clientY);
+    else hideCtxMenu();
+  }, 10);
+});
+document.addEventListener('mousedown', e => {
+  if (!document.getElementById('ctx-menu').contains(e.target)) hideCtxMenu();
+});
+
+function showCtxMenu(x, y) {
+  const m = document.getElementById('ctx-menu');
+  m.style.left = x + 'px';
+  m.style.top  = (y + 6) + 'px';
+  m.classList.add('show');
+}
+function hideCtxMenu() {
+  document.getElementById('ctx-menu').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LOADING
+// ═══════════════════════════════════════════════════════════════
+function showLoading(msg) {
+  const ol = document.getElementById('loading-overlay');
+  document.getElementById('loading-text').textContent = msg || 'Loading…';
+  ol.classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  const inReader = document.getElementById('view-reader').classList.contains('active');
+  if (!inReader) return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+
+  switch (e.key) {
+    case 'ArrowRight':
+    case 'PageDown':  if (!e.altKey) nextChapter(); break;
+    case 'ArrowLeft':
+    case 'PageUp':    if (!e.altKey) prevChapter(); break;
+    case 'b': case 'B': addBookmark(); break;
+    case 't': case 'T': toggleSidebar(); break;
+    case 'Escape': hideSidebar(); break;
+    case '+': case '=': adjustFont(1); break;
+    case '-': case '_': adjustFont(-1); break;
+  }
+});
+
+// Save position immediately when the user closes/refreshes the tab
+window.addEventListener('beforeunload', () => {
+  saveCurrentPosition();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════════
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT — load library from IndexedDB then render
+//  Also migrate any books previously stored in localStorage
+// ═══════════════════════════════════════════════════════════════
+(async () => {
+  // One-time migration from old localStorage format
+  const legacy = localStorage.getItem('hikari_library');
+  if (legacy) {
+    try {
+      const old = JSON.parse(legacy);
+      if (Array.isArray(old) && old.length > 0) {
+        for (const book of old) { await IDB.put(book); }
+        toast('Library migrated to IndexedDB');
+      }
+    } catch(e) { console.warn('Legacy migration failed:', e); }
+    localStorage.removeItem('hikari_library');
+  }
+
+  try { library = await IDB.getAll(); }
+  catch(err) { console.error('Failed to load library from IndexedDB:', err); library = []; }
+  renderLibrary();
+})();
+applyReadingPrefs();
+</script>
+</body>
+</html>
