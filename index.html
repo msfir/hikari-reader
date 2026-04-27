@@ -418,27 +418,9 @@ input, select { font-family: var(--font-ui); }
   flex-wrap: wrap;
 }
 
-/* ── CONTROLS TOGGLE TAB (mobile/tablet only) ───────────────── */
-#controls-tab {
-  display: none; /* shown only on ≤900px via media query */
-  width: 100%;
-  background: var(--bg-panel);
-  border-top: 1px solid var(--border);
-  border-bottom: none;
-  padding: 6px 0 4px;
-  cursor: pointer;
-  transition: background var(--trans);
-  align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-#controls-tab:hover { background: var(--bg-hover); }
-#controls-tab svg {
-  display: block;
-  width: 22px; height: 14px;
-  color: var(--text-3);
-  transition: color var(--trans);
-}
-#controls-tab:hover svg { color: var(--accent); }
+/* controls-tab removed — toggle moved to topbar */
+
+.tb-btn.controls-open { background: var(--accent-bg); color: var(--accent); }
 
 /* ── TOAST ──────────────────────────────────────────────────── */
 #toast {
@@ -540,8 +522,7 @@ input, select { font-family: var(--font-ui); }
     pointer-events: all;
   }
 
-  /* Show the toggle tab in reader view */
-  #view-reader.active #controls-tab { display: flex; }
+
 
   .rts-stats { gap: 10px; }
   .rts-stat  { font-size: 10px; }
@@ -554,6 +535,8 @@ input, select { font-family: var(--font-ui); }
 
   /* Topbar */
   #topbar { padding: 0 10px; gap: 2px; }
+  #topbar-controls-btn { display: flex !important; }
+  #topbar-controls-sep { display: block !important; }
   .logo-label { display: none; }
   .tb-sep { display: none; }
   .tb-btn { padding: 0 10px; font-size: 12.5px; gap: 5px; }
@@ -647,6 +630,15 @@ input, select { font-family: var(--font-ui); }
 
     <div class="tb-spacer"></div>
 
+    <!-- Reader controls toggle (mobile only) -->
+    <button class="tb-btn" id="topbar-controls-btn" onclick="toggleControls()" title="Reader controls" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+      </svg>
+    </button>
+    <div class="tb-sep" id="topbar-controls-sep" style="display:none"></div>
+
     <!-- Theme swatches -->
     <button class="theme-btn active" style="background:#f7f5f0" title="Light" onclick="setTheme('light',this)"></button>
     <button class="theme-btn" style="background:#f4edd8" title="Sepia" onclick="setTheme('sepia',this)"></button>
@@ -725,13 +717,6 @@ input, select { font-family: var(--font-ui); }
             <div id="reading-content"></div>
           </div>
         </div>
-
-        <!-- Controls toggle tab (mobile/tablet only) -->
-        <button id="controls-tab" onclick="toggleControls()" title="Toggle reader controls" aria-label="Toggle reader controls">
-          <svg id="controls-tab-icon" viewBox="0 0 24 10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3,8 12,2 21,8"/>
-          </svg>
-        </button>
 
         <!-- Bottom controls -->
         <div id="reader-controls">
@@ -1157,24 +1142,17 @@ async function openBook(id) {
 
 // Controls toggle — only active on ≤900px; on desktop the panel is always visible in flow
 function isMobileControls() {
-  return window.matchMedia('(max-width: 900px)').matches;
+  return window.matchMedia('(max-width: 600px)').matches;
 }
 
 function toggleControls() {
   if (!isMobileControls()) return;
   const panel = document.getElementById('reader-controls');
-  const tab   = document.getElementById('controls-tab');
-  const icon  = document.getElementById('controls-tab-icon');
+  const btn   = document.getElementById('topbar-controls-btn');
   const open  = panel.classList.toggle('open');
-  tab.classList.toggle('open', open);
-  // Flip chevron: up = closed (invite open), down = open (invite close)
-  icon.innerHTML = open
-    ? '<polyline points="3,2 12,8 21,2"/>'   // chevron-down
-    : '<polyline points="3,8 12,2 21,8"/>';  // chevron-up
-
-  // Give reading area room so last line isn't hidden under the panel
+  btn.classList.toggle('controls-open', open);
   const ra = document.getElementById('reading-area');
-  if (ra) ra.style.paddingBottom = open ? (panel.offsetHeight + 40) + 'px' : '';
+  if (ra) ra.style.paddingBottom = open ? (panel.offsetHeight + 16) + 'px' : '';
 }
 
 function closeControls() {
@@ -1182,11 +1160,7 @@ function closeControls() {
   const panel = document.getElementById('reader-controls');
   if (!panel.classList.contains('open')) return;
   panel.classList.remove('open');
-  const tab  = document.getElementById('controls-tab');
-  const icon = document.getElementById('controls-tab-icon');
-  tab.classList.remove('open');
-
-  icon.innerHTML = '<polyline points="3,8 12,2 21,8"/>';
+  document.getElementById('topbar-controls-btn').classList.remove('controls-open');
   const ra = document.getElementById('reading-area');
   if (ra) ra.style.paddingBottom = '';
 }
